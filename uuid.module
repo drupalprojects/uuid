@@ -5,10 +5,11 @@
  * Implementation of hook_init().
  */
 function uuid_init() {
+  $path = drupal_get_path('module', 'uuid');
   $modules = array('node', 'user');
   foreach ($modules as $module) {
     if (module_exists($module)) {
-      module_load_include('inc', 'uuid', 'uuid_' . $module);
+      include_once $path . '/uuid_' . $module . '.inc';
     }
   }
 }
