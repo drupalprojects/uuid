@@ -5,7 +5,7 @@
  * Implementation of hook_install().
  */
 function uuid_install() {
-  $tables = array('node' => 'nid', 'users' => 'uid');
+  $tables = array('node' => 'nid', 'users' => 'uid', 'node_revisions' => 'vid');
   foreach ($tables as $table => $key) {
     // Create tables.
     db_query(uuid_table_schema($table, $key));
@@ -13,6 +13,40 @@ function uuid_install() {
     // Build UUIDs.
     db_query('INSERT INTO {uuid_' . $table . '} SELECT ' . $key . ', UUID() FROM {' . $table . '}');
   }
+}
+
+/**
+ * Remove duplicated user UUIDs and change uuid field to index instead of a primary key.
+ */
+function uuid_update_1() {
+  $ret = array();
+
+  // Move the non duplicates into a temporary table.
+  $ret[] = update_sql('CREATE TABLE {uuid_users_temp} AS SELECT * FROM {uuid_users} GROUP BY uid');
+
+  // Delete the old table.
+  $ret[] = update_sql('DROP TABLE {uuid_users}');
+
+  // Rename the new_table to the name of the old_table.
+  $ret[] = update_sql('RENAME TABLE {uuid_users_temp} TO {uuid_users}');
+
+  // Add key and index to new table.
+  $ret[] = update_sql('ALTER TABLE {uuid_users} ADD PRIMARY KEY(uid), ADD INDEX {uuid_users}_uuid_idx(uuid)');
+
+  // Recreate primary key and add index to uuid_node table.
+  $ret[] = update_sql('ALTER TABLE {uuid_node} DROP PRIMARY KEY, ADD PRIMARY KEY(nid), ADD INDEX {uuid_node}_uuid_idx(uuid)');
+  
+  return $ret;
+}
+
+function uuid_update_2() {
+  // Create uuid_node_revisions table.
+  db_query(uuid_table_schema('node_revisions', 'vid'));
+
+  // Populate uuid_node_revisions table.
+  db_query('INSERT INTO {uuid_node_revisions} SELECT vid, UUID() FROM {node_revisions}');
+  
+  return array();
 }
 
 /**
@@ -26,16 +60,19 @@ function uuid_install() {
  *   Array with table structure definition (schema).
  */
 function uuid_table_schema($table, $key = 'key') {
-  return "CREATE TABLE uuid_". $table ." (
+  return "CREATE TABLE {uuid_". $table ."} (
     ". $key ." int(10) unsigned NOT NULL default '0',
     uuid char(36) NOT NULL default '',
-    PRIMARY KEY  (". $key .", uuid)
+    PRIMARY KEY  (". $key ."),
+    KEY {uuid_". $table ."}_uuid_idx(uuid)
   ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;";
 }
 
 /**
  * Implementation of hook_uninstall().
  */
-function content_uninstall() {
-  // TODO
+function uuid_uninstall() {
+  foreach(array('node', 'users', 'node_revisions') as $table) {
+    db_query('DROP TABLE {uuid_'. $table .'}');
+  }
 }
