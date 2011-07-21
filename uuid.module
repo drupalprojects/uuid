@@ -136,6 +136,16 @@ function uuid_node_load($node) {
 }
 
 /**
+ * Implementation of hook_views_api().
+ */
+function uuid_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'uuid'),
+  );
+}
+
+/**
  * Returns the node associated with a UUID. Uses db_rewrite_sql() to ensure
  * node_access rules are preserved.
  *
