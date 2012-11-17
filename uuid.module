@@ -30,6 +30,11 @@ function uuid_menu() {
 function uuid_nodeapi(&$node, $op, $teaser, $page) {
   $automatic_types = variable_get('uuid_automatic_for_nodes', array());
 
+  // Return early if we don't automatically generate UUIDs for this type.
+  if (empty($automatic_types[$node->type])) {
+    return;
+  }
+
   switch ($op) {
     case 'load':
       return uuid_node_load($node);
