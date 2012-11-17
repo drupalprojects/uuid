@@ -74,14 +74,13 @@ function uuid_nodeapi(&$node, $op, $teaser, $page) {
       }
       $auto_create = in_array($node->type, $automatic_types, TRUE);
       $uuid_exists = isset($node->uuid) && uuid_is_valid($node->uuid);
-      $uuid_in_db = !empty($uuid_information['uuid']);
 
       // Create a UUID if this is an automatic type but no UUID exists. Save the
       // UUID if it's valid but is not in the database.
       if ($uuid_exists || $auto_create) {
         $node->uuid = $uuid_exists ? $node->uuid : uuid_uuid();
         // Update the existing UUID.
-        if (!$uuid_in_db) {
+        if ($uuid_information['uuid']===FALSE) {
           db_query("INSERT INTO {uuid_node} (nid, uuid) VALUES (%d, '%s')", $node->nid, $node->uuid);
         }
         elseif ($uuid_information['uuid'] != $node->uuid) {
